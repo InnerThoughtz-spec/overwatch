@@ -390,6 +390,8 @@ aside#right-panel { border-right: 0; border-left: 1px solid var(--line); }
 .ft-btn.on { color: var(--cyan); border-color: var(--cyan); background: rgba(58,214,255,0.07); }
 .ft-cycle { color: var(--amber); border-color: var(--amber-dim); }
 .ft-cycle:hover { color: var(--amber); border-color: var(--amber); background: rgba(255,181,71,0.08); }
+.ft-cctv { color: var(--red); border-color: rgba(255,77,109,0.4); }
+.ft-cctv:hover { color: #fff; border-color: var(--red); background: rgba(255,77,109,0.12); }
 .ft-fs { color: var(--cyan); }
 .ft-src {
   margin-left: auto; font-family: var(--font-mono); font-size: 9px;

@@ -144,5 +144,79 @@ window.OVERWATCH_STREAM = (function () {
     return { kind, url };
   }
 
-  return { watchCam, findStream, extractStreams };
+  // ════════════════════════════════════════════════════════════
+  // INSECAM directory — fetch live IP-cam URLs by country
+  // Insecam.org indexes IP cameras that are reachable on the public
+  // internet (no auth bypass — the cams themselves are open).
+  // We pull the country-listing page through the worker proxy and
+  // parse out each cam's direct snapshot URL + lat/lng/title.
+  // ════════════════════════════════════════════════════════════
+
+  // ISO-3166-1 alpha-2 country codes Insecam organizes by
+  const ISO2_BY_COUNTRY = {
+    'USA':'US','Canada':'CA','Mexico':'MX','UK':'GB','Ireland':'IE','France':'FR','Germany':'DE','Italy':'IT','Spain':'ES',
+    'Portugal':'PT','Netherlands':'NL','Belgium':'BE','Czechia':'CZ','Poland':'PL','Hungary':'HU','Austria':'AT',
+    'Switzerland':'CH','Sweden':'SE','Norway':'NO','Denmark':'DK','Finland':'FI','Iceland':'IS','Estonia':'EE',
+    'Latvia':'LV','Lithuania':'LT','Russia':'RU','Ukraine':'UA','Romania':'RO','Bulgaria':'BG','Greece':'GR',
+    'Turkey':'TR','Israel':'IL','UAE':'AE','Saudi Arabia':'SA','Qatar':'QA','Iran':'IR','Iraq':'IQ',
+    'Egypt':'EG','Morocco':'MA','Tunisia':'TN','Algeria':'DZ','Nigeria':'NG','Kenya':'KE','South Africa':'ZA',
+    'Japan':'JP','South Korea':'KR','China':'CN','Hong Kong':'HK','Taiwan':'TW','Thailand':'TH','Vietnam':'VN',
+    'Indonesia':'ID','Philippines':'PH','Malaysia':'MY','Singapore':'SG','India':'IN','Pakistan':'PK',
+    'Bangladesh':'BD','Sri Lanka':'LK','Nepal':'NP','Mongolia':'MN','Kazakhstan':'KZ','Uzbekistan':'UZ',
+    'Australia':'AU','NZ':'NZ','Brazil':'BR','Argentina':'AR','Chile':'CL','Colombia':'CO','Peru':'PE',
+    'Ecuador':'EC','Venezuela':'VE','Bolivia':'BO','Paraguay':'PY','Uruguay':'UY','Cuba':'CU','Jamaica':'JM',
+    'Puerto Rico':'PR','Lebanon':'LB','Jordan':'JO','Bahrain':'BH','Kuwait':'KW','Oman':'OM','Ghana':'GH',
+    'Senegal':'SN','Ethiopia':'ET'
+  };
+
+  function iso2For(countryName) { return ISO2_BY_COUNTRY[countryName] || null; }
+
+  // Parse Insecam listing page HTML → array of cam objects
+  function parseInsecamListing(html) {
+    const cams = [];
+    // Insecam cam thumbnails reference image URLs of the form:
+    //   <img src="http://CAMERAHOST/snapshot.cgi?..." />
+    // and have a parent link to /en/view/{id}/
+    // We pull every <img src> that points off-domain AND a view link.
+    const imgRe = /<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>/gi;
+    const seenUrls = new Set();
+    let m;
+    while ((m = imgRe.exec(html))) {
+      const u = m[1];
+      // Skip same-origin and obvious assets
+      if (!/^https?:\/\//i.test(u)) continue;
+      if (/insecam\.org/i.test(u)) continue;
+      if (/\.(svg|gif|webp|css|js|ico|png|woff2?)(\?|$)/i.test(u)) continue;
+      if (seenUrls.has(u)) continue;
+      seenUrls.add(u);
+      // Try to extract a title from nearby <a title="..."> if present
+      const ctxStart = Math.max(0, m.index - 400);
+      const ctxEnd = Math.min(html.length, m.index + 300);
+      const ctx = html.slice(ctxStart, ctxEnd);
+      const titleMatch = ctx.match(/title\s*=\s*["']([^"']+)["']/i);
+      const locMatch = ctx.match(/(?:City|Region|Location|Country)\s*[:\-]\s*<\/?[a-z]*>?\s*([^<\n]+)/i);
+      cams.push({
+        url: u,
+        title: titleMatch ? titleMatch[1] : 'IP camera',
+        location: locMatch ? locMatch[1].trim().slice(0, 80) : ''
+      });
+    }
+    return cams;
+  }
+
+  async function fetchInsecamCountry(iso2, workerProxy, onProgress) {
+    if (!workerProxy) throw new Error('Worker proxy required for Insecam fetch (CORS)');
+    onProgress && onProgress('fetching Insecam · ' + iso2 + '…');
+    const target = 'https://www.insecam.org/en/bycountry/' + iso2 + '/';
+    const proxied = workerProxy.replace(/\/$/, '') + '/proxy?url=' + encodeURIComponent(target);
+    const res = await fetchWithTimeout(proxied, 15000);
+    if (!res.ok) throw new Error('Insecam HTTP ' + res.status);
+    const html = await res.text();
+    onProgress && onProgress('parsing cam URLs…');
+    const cams = parseInsecamListing(html);
+    if (!cams.length) throw new Error('no cams parsed (page structure may have changed)');
+    return cams;
+  }
+
+  return { watchCam, findStream, extractStreams, fetchInsecamCountry, iso2For, playImage };
 })();

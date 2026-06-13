@@ -302,10 +302,15 @@ window.OVERWATCH_UI = (function () {
         <button class="ft-btn on" data-ft="live">▶ LIVE</button>
         ${street ? `<button class="ft-btn" data-ft="street">STREET</button>` : ''}
         <button class="ft-btn ft-cycle" id="ft-next">↻ NEXT</button>
+        <button class="ft-btn ft-cctv" id="ft-cctv" title="pull live IP cams in this country via Insecam (requires Worker proxy)">⛶ CCTV</button>
         <button class="ft-btn ft-fs" id="ft-fs" title="fullscreen">⛶ FULL</button>
         <span class="ft-src" id="ft-src"></span>
       `;
       frame.appendChild(head);
+
+      // INSECAM IP-camera pull (requires Worker proxy)
+      let insecamCams = null;
+      let insecamIdx = 0;
 
       const body = document.createElement('div');
       body.className = 'feed-body';
@@ -405,6 +410,63 @@ window.OVERWATCH_UI = (function () {
         }
         renderLive();
       });
+      // ⛶ CCTV — fetch Insecam country listing via Worker proxy
+      document.getElementById('ft-cctv').addEventListener('click', async () => {
+        const wp = (localStorage.getItem('overwatch.workerProxy') || '').trim();
+        if (!wp) {
+          body.innerHTML = `<div class="watch-pad"><div class="watch-glyph" style="font-size:36px">⚠</div>
+            <div class="dim" style="text-align:center;max-width:80%;line-height:1.5;">
+              <b style="color:var(--amber)">WORKER PROXY REQUIRED</b><br/>
+              Insecam fetches must route through your deployed Cloudflare Worker.<br/>
+              Paste it into the BYPASS PROXY panel on the left, then click CCTV again.
+            </div></div>`;
+          return;
+        }
+        const iso = window.OVERWATCH_STREAM.iso2For(country) || 'US';
+        body.innerHTML = `<div class="watch-stream-stage">
+          <div class="watch-overlay"><div class="watch-spinner"></div>
+            <div class="watch-status" id="watch-status">connecting Insecam · ${iso}…</div>
+            <div class="watch-source dim small">live IP-cam directory · publicly accessible devices</div>
+          </div></div>`;
+        try {
+          const cams = await window.OVERWATCH_STREAM.fetchInsecamCountry(iso, wp, msg => {
+            const el = document.getElementById('watch-status'); if (el) el.textContent = msg;
+          });
+          insecamCams = cams;
+          insecamIdx = 0;
+          renderInsecam();
+          logActivity(`INSECAM PULL · ${iso} · ${cams.length} cams ingested`);
+        } catch (err) {
+          body.innerHTML = `<div class="watch-pad"><div class="watch-glyph" style="font-size:36px">✕</div>
+            <div class="dim" style="text-align:center;max-width:80%;">Insecam fetch failed · ${escapeHtml(err.message)}</div></div>`;
+        }
+      });
+
+      function renderInsecam() {
+        if (!insecamCams || !insecamCams.length) return;
+        const cam = insecamCams[insecamIdx % insecamCams.length];
+        body.innerHTML = '';
+        const stage = document.createElement('div');
+        stage.style.cssText = 'position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;';
+        body.appendChild(stage);
+        const img = document.createElement('img');
+        img.id = 'feed-video';
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000;';
+        stage.appendChild(img);
+        window.OVERWATCH_STREAM.playImage(img, cam.url, 2000);
+        document.getElementById('ft-src').textContent =
+          `INSECAM · ${cam.title} ${cam.location ? '· '+cam.location : ''} · ${insecamIdx+1}/${insecamCams.length}`;
+      }
+
+      // ↻ NEXT also cycles Insecam cams when active
+      const origNext = document.getElementById('ft-next');
+      origNext.addEventListener('click', () => {
+        if (insecamCams && insecamCams.length) {
+          insecamIdx = (insecamIdx + 1) % insecamCams.length;
+          renderInsecam();
+        }
+      }, true);
+
       // ⛶ FULL — works in either mode (targets iframe or body)
       document.getElementById('ft-fs').addEventListener('click', () => {
         const el = document.getElementById('feed-iframe') || body;
