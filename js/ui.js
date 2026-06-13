@@ -310,9 +310,37 @@ window.OVERWATCH_UI = (function () {
       body.className = 'feed-body';
       frame.appendChild(body);
 
-      function renderLive() {
+      async function renderLive() {
         const cur = variants[idx % variants.length];
         body.innerHTML = '';
+
+        // 1) If we have a stream-extract URL, attempt the real bypass: fetch cam
+        //    page via CORS proxy, extract m3u8, play in <video> with hls.js.
+        if (n.feed_extract_url && window.OVERWATCH_STREAM) {
+          const stage = document.createElement('div');
+          stage.className = 'watch-stream-stage';
+          stage.innerHTML = `
+            <div class="watch-overlay" id="watch-overlay">
+              <div class="watch-spinner"></div>
+              <div class="watch-status" id="watch-status">connecting…</div>
+              <div class="watch-source dim small">bypass · ${escapeHtml(n.feed_source)} · ${escapeHtml(n.feed_name)}</div>
+            </div>
+            <div id="stream-target" class="stream-target"></div>
+          `;
+          body.appendChild(stage);
+          const setStatus = msg => { const el = document.getElementById('watch-status'); if (el) el.textContent = msg; };
+          try {
+            await window.OVERWATCH_STREAM.watchCam(n.feed_extract_url, document.getElementById('stream-target'), setStatus);
+            const ov = document.getElementById('watch-overlay'); if (ov) ov.remove();
+            document.getElementById('ft-src').textContent = `HLS bypass · ${n.feed_source} · ${n.feed_name}`;
+            return;
+          } catch (err) {
+            // fall through to YT search pad
+            console.warn('[watchCam]', err);
+          }
+        }
+
+        // 2) Fallback: YT live-filter search pad
         const pad = document.createElement('div');
         pad.className = 'watch-pad';
         pad.innerHTML = `
@@ -321,8 +349,9 @@ window.OVERWATCH_UI = (function () {
             WATCH LIVE CAMS NEAR ${escapeHtml(cityName.toUpperCase())} ↗
           </a>
           <div class="watch-note dim small">
+            ${n.feed_extract_url ? '<b>HLS bypass failed</b> for nearest source — ' : ''}
             search query · <b>${escapeHtml(cur.label)}</b><br/>
-            opens YouTube filtered to LIVE streams in a new tab — pick a working one. press <b>↻ NEXT</b> to widen / narrow the search.
+            opens YouTube filtered to LIVE streams in a new tab — press <b>↻ NEXT</b> to widen / narrow.
           </div>
         `;
         body.appendChild(pad);

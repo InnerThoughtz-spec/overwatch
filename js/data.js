@@ -171,14 +171,25 @@
     { url:'https://www.youtube.com/embed/wT4yvNuFI64?autoplay=1&mute=1',                   lat:55.7558, lng:37.6173,  src:'YouTube',     name:'Moscow Live',      embed:true },
     { url:'https://www.youtube.com/embed/N609loYkFJo?autoplay=1&mute=1',                   lat:50.0875, lng:14.4214,  src:'YouTube',     name:'Prague Old Town',  embed:true },
     { url:'https://www.youtube.com/embed/h1wly909BYw?autoplay=1&mute=1',                   lat:-22.9711,lng:-43.1822, src:'YouTube',     name:'Copacabana Live',  embed:true },
-    { url:'https://www.youtube.com/embed/U3pBQ2_LkUg?autoplay=1&mute=1',                   lat:13.7563, lng:100.5018, src:'YouTube',     name:'Bangkok Live',     embed:true }
+    { url:'https://www.youtube.com/embed/U3pBQ2_LkUg?autoplay=1&mute=1',                   lat:13.7563, lng:100.5018, src:'YouTube',     name:'Bangkok Live',     embed:true },
+
+    // ════════════════════════════════════════════════════════
+    // DIRECT STREAM URLs (the actual bypass — hls.js plays these)
+    // These are publicly published HLS streams that need no extraction
+    // and no proxy. hls.js loads them directly in <video>.
+    // Honest note: free public 24/7 m3u8 URLs are inherently volatile.
+    // When one dies, replace it via the WATCH_LINKS array.
+    // ════════════════════════════════════════════════════════
+    { url:'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',                                                 lat:28.5721, lng:-80.6480, src:'NASA TV', name:'NASA Public Channel · HLS', embed:false, extract:true },
+    { url:'https://content.uplynk.com/channel/3324f2467c414329b3b0cc5cd987b6be.m3u8',                                              lat:34.0522, lng:-118.2437,src:'CBS News LA · HLS', name:'CBS News Los Angeles', embed:false, extract:true }
   ];
 
   function nearestWatch(lat, lng) {
-    // Bias toward embed-friendly entries within reasonable range,
-    // so users see actual playing video instead of OPEN-in-new-tab.
-    let bestEmbed = null,  bestEmbedD = Infinity;
-    let bestAny   = null,  bestAnyD   = Infinity;
+    // Three-way bias: prefer stream-extractable (SkylineWebcams) within range,
+    // else embed-friendly YT iframe, else any.
+    let bestExtract = null, bestExtractD = Infinity;
+    let bestEmbed   = null, bestEmbedD   = Infinity;
+    let bestAny     = null, bestAnyD     = Infinity;
     for (let i = 0; i < WATCH_LINKS.length; i++) {
       const s = WATCH_LINKS[i];
       const dLat = s.lat - lat;
@@ -186,16 +197,19 @@
       const d = dLat*dLat + dLng*dLng;
       if (d < bestAnyD) { bestAnyD = d; bestAny = s; }
       if (s.embed && d < bestEmbedD) { bestEmbedD = d; bestEmbed = s; }
+      if (s.extract && d < bestExtractD) { bestExtractD = d; bestExtract = s; }
     }
-    // If an embed is within ~25° (≈2800km) of the cam, prefer it
-    const pick = (bestEmbed && bestEmbedD < 625) ? bestEmbed : bestAny;
-    const d2 = pick === bestEmbed ? bestEmbedD : bestAnyD;
+    let pick, d2;
+    if (bestExtract && bestExtractD < 900)      { pick = bestExtract; d2 = bestExtractD; }
+    else if (bestEmbed && bestEmbedD < 625)     { pick = bestEmbed;   d2 = bestEmbedD; }
+    else                                         { pick = bestAny;     d2 = bestAnyD; }
     const km = Math.round(Math.sqrt(d2) * 111);
     return {
-      open_url: pick.url,
-      embed_url: pick.embed ? pick.url : null,
-      source: pick.src,
-      name: pick.name,
+      open_url:    pick.url,
+      embed_url:   pick.embed   ? pick.url : null,
+      extract_url: pick.extract ? pick.url : null,
+      source:      pick.src,
+      name:        pick.name,
       distance_km: km,
       mp_url: `https://www.mapillary.com/embed?map_style=mapbox-streets&map_lat=${lat}&map_lng=${lng}&map_zoom=18&style=split`
     };
@@ -237,12 +251,15 @@
     const w = nearestWatch(lat, lng);
     const searchUrl = liveSearchUrl(city, camName);
     return {
-      feed_mode: w.embed_url ? 'inline embed · ' + w.source : 'YT live search · ' + (city || 'region'),
-      feed_url: w.embed_url,                    // inline iframe attempt (best-effort, may be dead)
-      feed_open_url: searchUrl,                 // UNIQUE per cam — opens YT live search for this city
-      feed_legacy_open: w.open_url,             // the original pool URL, kept for the cycle button
-      feed_source: w.embed_url ? w.source : 'YouTube Live Search',
-      feed_name: w.embed_url ? w.name : ((city||'region') + ' · live cams'),
+      feed_mode: w.extract_url ? 'HLS bypass · ' + w.source
+               : w.embed_url ? 'inline embed · ' + w.source
+               : 'YT live search · ' + (city || 'region'),
+      feed_extract_url: w.extract_url,          // NEW: page to fetch+extract m3u8 from (real bypass)
+      feed_url: w.embed_url,                    // inline YT iframe attempt (best-effort)
+      feed_open_url: searchUrl,                 // unique-per-cam YT live search (always fallback)
+      feed_legacy_open: w.open_url,             // pool entry's source URL
+      feed_source: w.source,
+      feed_name: w.name,
       feed_distance_km: w.distance_km,
       feed_street_url: w.mp_url
     };
