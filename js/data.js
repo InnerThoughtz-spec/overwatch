@@ -223,15 +223,26 @@
   // Legacy alias retained for any code still calling nearestStream
   const STREAMS = WATCH_LINKS;
 
+  // YouTube search URL filtered to LIVE videos — every cam gets a UNIQUE
+  // destination, so users land on a fresh search of nearby live webcams
+  // instead of all collapsing onto one EarthCam city page.
+  // sp=EgJAAQ%3D%3D = YouTube's "live now" filter.
+  function liveSearchUrl(city, camName) {
+    const q = (camName ? camName + ' · ' : '') + (city || '') + ' live webcam';
+    return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q) + '&sp=EgJAAQ%253D%253D';
+  }
+
   // Spread these fields into every cam node — single call per cam.
-  function nearestWatchFields(lat, lng) {
+  function nearestWatchFields(lat, lng, city, camName) {
     const w = nearestWatch(lat, lng);
+    const searchUrl = liveSearchUrl(city, camName);
     return {
-      feed_mode: w.embed_url ? 'inline embed · ' + w.src : 'open on ' + w.source + ' ↗',
-      feed_url: w.embed_url,          // may be null → no inline iframe
-      feed_open_url: w.open_url,      // always present
-      feed_source: w.source,
-      feed_name: w.name,
+      feed_mode: w.embed_url ? 'inline embed · ' + w.source : 'YT live search · ' + (city || 'region'),
+      feed_url: w.embed_url,                    // inline iframe attempt (best-effort, may be dead)
+      feed_open_url: searchUrl,                 // UNIQUE per cam — opens YT live search for this city
+      feed_legacy_open: w.open_url,             // the original pool URL, kept for the cycle button
+      feed_source: w.embed_url ? w.source : 'YouTube Live Search',
+      feed_name: w.embed_url ? w.name : ((city||'region') + ' · live cams'),
       feed_distance_km: w.distance_km,
       feed_street_url: w.mp_url
     };
@@ -572,16 +583,17 @@
     for (let i = 0; i < traffic; i++) {
       const [la, ln] = jitter(lat, lng, radius);
       const dir = pick(directions);
+      const cname_tr = intersection();
       cameras.push({
         id: `${code}-tr-${i.toString(36)}`,
-        name: intersection(),
+        name: cname_tr,
         type:'traffic', _layer:'traffic', _kind:'camera',
         lat: la, lng: ln,
         city: name, state, country,
         agency, source: agency.split(' / ')[0],
         direction: dir + ' facing',
         resolution: pick(resolutions),
-        ...nearestWatchFields(la, ln),
+        ...nearestWatchFields(la, ln, name, cname_tr),
         watchable: true,
         installed: 2018 + ri(8),
         last_verified: `2026-${String(ri(6)+1).padStart(2,'0')}-${String(ri(28)+1).padStart(2,'0')}`,
@@ -612,9 +624,10 @@
 
     for (let i = 0; i < pub; i++) {
       const [la, ln] = jitter(lat, lng, radius * 0.5);
+      const cname_pub = publicSpot() + ' · ' + name;
       cameras.push({
         id: `${code}-pub-${i.toString(36)}`,
-        name: publicSpot() + ' · ' + name,
+        name: cname_pub,
         type:'public', _layer:'public', _kind:'camera',
         lat: la, lng: ln,
         city: name, state, country,
@@ -622,7 +635,7 @@
         source: 'Municipal webcam',
         direction: pick(directions) + ' facing',
         resolution: pick(resolutions),
-        ...nearestWatchFields(la, ln),
+        ...nearestWatchFields(la, ln, name, cname_pub),
         watchable: true,
         installed: 2017 + ri(9)
       });
@@ -630,30 +643,32 @@
 
     for (let i = 0; i < scenic; i++) {
       const [la, ln] = jitter(lat, lng, radius * 2.5);
+      const cname_sc = 'Coastal Lookout #' + (i+1) + ' · ' + name;
       cameras.push({
         id: `${code}-sc-${i.toString(36)}`,
-        name: 'Coastal Lookout #' + (i+1) + ' · ' + name,
+        name: cname_sc,
         type:'scenic', _layer:'scenic', _kind:'camera',
         lat: la, lng: ln,
         city: name, state, country,
         agency: 'Tourism / Coastal Authority',
         source: 'Scenic webcam',
-        ...nearestWatchFields(la, ln),
+        ...nearestWatchFields(la, ln, name, cname_sc),
         watchable: true
       });
     }
 
     for (let i = 0; i < port; i++) {
       const [la, ln] = jitter(lat, lng, radius * 1.4);
+      const cname_pt = (r()<0.5?'Port Gate':'Apron Cam') + ' #' + (i+1) + ' · ' + name;
       cameras.push({
         id: `${code}-pt-${i.toString(36)}`,
-        name: (r()<0.5?'Port Gate':'Apron Cam') + ' #' + (i+1) + ' · ' + name,
+        name: cname_pt,
         type:'port', _layer:'port', _kind:'camera',
         lat: la, lng: ln,
         city: name, state, country,
         agency: r()<0.5 ? 'Port Authority' : 'Airport Authority',
         source: 'Logistics CCTV',
-        ...nearestWatchFields(la, ln),
+        ...nearestWatchFields(la, ln, name, cname_pt),
         watchable: true
       });
     }
@@ -673,9 +688,10 @@
     const lng = cLng + deg * Math.sin(theta);
     if (Math.abs(lat) > 78) continue;
     const hwy = pick(HWY_PREFIX) + (ri(99)+1);
+    const cname_rur = `${hwy} @ MP ${ri(950)+1}`;
     cameras.push({
       id: `rur-${i.toString(36)}`,
-      name: `${hwy} @ MP ${ri(950)+1}`,
+      name: cname_rur,
       type:'traffic', _layer:'traffic', _kind:'camera',
       lat, lng,
       city: 'Intercity Corridor · near ' + c[0],
@@ -685,7 +701,7 @@
       source: 'Highway corridor cam',
       direction: pick(directions) + ' facing',
       resolution: pick(resolutions),
-      ...nearestWatchFields(lat, lng),
+      ...nearestWatchFields(lat, lng, c[0], cname_rur),
       watchable: true,
       installed: 2018 + ri(8)
     });

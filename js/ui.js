@@ -306,6 +306,10 @@ window.OVERWATCH_UI = (function () {
       function renderLive() {
         body.innerHTML = '';
         const cur = alts.length ? alts[idx] : { url:n.feed_open_url, embed_url:n.feed_url, source:n.feed_source, name:n.feed_name, embed:!!n.feed_url };
+        // Every non-embed destination opens the per-cam UNIQUE YouTube live search,
+        // not the pool's static page — that's why Houston cams stop all collapsing onto one URL.
+        const openTarget = cur.embed ? cur.url : (n.feed_open_url || cur.url);
+        const cityName = n.city || 'this area';
         if (cur.embed) {
           const ifr = document.createElement('iframe');
           ifr.src = cur.embed_url;
@@ -317,18 +321,18 @@ window.OVERWATCH_UI = (function () {
           body.appendChild(ifr);
           const cta = document.createElement('a');
           cta.className = 'btn-watch-small';
-          cta.href = cur.url; cta.target = '_blank'; cta.rel = 'noopener noreferrer';
-          cta.textContent = `feed offline?  open on ${cur.source} ↗`;
+          cta.href = n.feed_open_url || cur.url; cta.target = '_blank'; cta.rel = 'noopener noreferrer';
+          cta.textContent = `feed offline?  find live webcams near ${escapeHtml(cityName)} ↗`;
           body.appendChild(cta);
         } else {
           const pad = document.createElement('div');
           pad.className = 'watch-pad';
           pad.innerHTML = `
             <div class="watch-thumb"><div class="watch-glyph">▶</div></div>
-            <a class="btn-watch" href="${cur.url}" target="_blank" rel="noopener noreferrer">
-              WATCH LIVE ON ${escapeHtml(cur.source.toUpperCase())} ↗
+            <a class="btn-watch" href="${openTarget}" target="_blank" rel="noopener noreferrer">
+              FIND LIVE WEBCAMS NEAR ${escapeHtml(cityName.toUpperCase())} ↗
             </a>
-            <div class="watch-note dim small">${escapeHtml(cur.source)} blocks inline embed — opens in a new tab. press <b>↻ NEXT</b> to try another nearby stream.</div>
+            <div class="watch-note dim small">opens a YouTube live-filter search for cams near this point — unique per node. press <b>↻ NEXT</b> to try a different embed.</div>
           `;
           body.appendChild(pad);
         }
