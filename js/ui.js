@@ -275,12 +275,25 @@ window.OVERWATCH_UI = (function () {
       `;
       frame.appendChild(locked);
     } else if (n.feed_open_url || n.feed_url) {
-      // Build the cycling stream list — nearest first, plus alternates
-      const alts = (window.OVERWATCH_DATA.altStreams && window.OVERWATCH_DATA.altStreams(n.lat, n.lng, 12)) || [];
-      // Promote any embed-friendly alts to the top so user gets actual playback
-      alts.sort((a,b) => (b.embed?1:0) - (a.embed?1:0));
+      const street = n.feed_street_url;
+      const cityName = n.city || 'this area';
+      const stateName = n.state || '';
+      const country  = n.country || '';
+      const camName  = n.name || '';
+
+      // Build search variants — 6 different YouTube live-filter queries per cam.
+      // Each one widens or specializes the search so users can find a working stream fast.
+      const yt = q => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q) + '&sp=EgJAAQ%253D%253D';
+      const variants = [
+        { url: yt(`${camName} ${cityName} live webcam`),        label: `${camName} · ${cityName}` },
+        { url: yt(`${cityName} live webcam`),                    label: `${cityName} live` },
+        { url: yt(`${cityName} traffic camera live`),            label: `${cityName} traffic cam` },
+        { url: yt(`live webcam ${cityName} 24/7`),               label: `${cityName} 24/7 stream` },
+        { url: yt(`${cityName} ${stateName} webcam`),            label: `${cityName} ${stateName}`.trim() },
+        { url: yt(`${country} live cam stream`),                 label: `${country} cams` }
+      ].filter(v => v.label && v.label.trim() && !v.label.startsWith('·'));
       let idx = 0;
-      const street   = n.feed_street_url;
+      let mode = 'live';
 
       const head = document.createElement('div');
       head.className = 'feed-toggle';
@@ -297,46 +310,23 @@ window.OVERWATCH_UI = (function () {
       body.className = 'feed-body';
       frame.appendChild(body);
 
-      function srcCaption() {
-        if (!alts.length) return n.feed_source + ' · ' + n.feed_name;
-        const a = alts[idx];
-        return `${a.source} · ${a.name} · ${a.distance_km}km · ${idx+1}/${alts.length}`;
-      }
-
       function renderLive() {
+        const cur = variants[idx % variants.length];
         body.innerHTML = '';
-        const cur = alts.length ? alts[idx] : { url:n.feed_open_url, embed_url:n.feed_url, source:n.feed_source, name:n.feed_name, embed:!!n.feed_url };
-        // Every non-embed destination opens the per-cam UNIQUE YouTube live search,
-        // not the pool's static page — that's why Houston cams stop all collapsing onto one URL.
-        const openTarget = cur.embed ? cur.url : (n.feed_open_url || cur.url);
-        const cityName = n.city || 'this area';
-        if (cur.embed) {
-          const ifr = document.createElement('iframe');
-          ifr.src = cur.embed_url;
-          ifr.id = 'feed-iframe';
-          ifr.setAttribute('allow', 'autoplay; fullscreen; geolocation');
-          ifr.setAttribute('allowfullscreen', '');
-          ifr.setAttribute('referrerpolicy', 'no-referrer');
-          ifr.setAttribute('loading', 'eager');
-          body.appendChild(ifr);
-          const cta = document.createElement('a');
-          cta.className = 'btn-watch-small';
-          cta.href = n.feed_open_url || cur.url; cta.target = '_blank'; cta.rel = 'noopener noreferrer';
-          cta.textContent = `feed offline?  find live webcams near ${escapeHtml(cityName)} ↗`;
-          body.appendChild(cta);
-        } else {
-          const pad = document.createElement('div');
-          pad.className = 'watch-pad';
-          pad.innerHTML = `
-            <div class="watch-thumb"><div class="watch-glyph">▶</div></div>
-            <a class="btn-watch" href="${openTarget}" target="_blank" rel="noopener noreferrer">
-              FIND LIVE WEBCAMS NEAR ${escapeHtml(cityName.toUpperCase())} ↗
-            </a>
-            <div class="watch-note dim small">opens a YouTube live-filter search for cams near this point — unique per node. press <b>↻ NEXT</b> to try a different embed.</div>
-          `;
-          body.appendChild(pad);
-        }
-        document.getElementById('ft-src').textContent = srcCaption();
+        const pad = document.createElement('div');
+        pad.className = 'watch-pad';
+        pad.innerHTML = `
+          <div class="watch-thumb"><div class="watch-glyph">▶</div></div>
+          <a class="btn-watch" href="${cur.url}" target="_blank" rel="noopener noreferrer">
+            WATCH LIVE CAMS NEAR ${escapeHtml(cityName.toUpperCase())} ↗
+          </a>
+          <div class="watch-note dim small">
+            search query · <b>${escapeHtml(cur.label)}</b><br/>
+            opens YouTube filtered to LIVE streams in a new tab — pick a working one. press <b>↻ NEXT</b> to widen / narrow the search.
+          </div>
+        `;
+        body.appendChild(pad);
+        document.getElementById('ft-src').textContent = `YouTube live search · ${cur.label} · ${idx+1}/${variants.length}`;
       }
       function renderStreet() {
         body.innerHTML = '';
@@ -347,10 +337,9 @@ window.OVERWATCH_UI = (function () {
         ifr.setAttribute('allowfullscreen', '');
         ifr.setAttribute('referrerpolicy', 'no-referrer');
         body.appendChild(ifr);
-        document.getElementById('ft-src').textContent = 'Mapillary · street imagery near ' + n.name;
+        document.getElementById('ft-src').textContent = 'Mapillary · street imagery near ' + camName;
       }
 
-      let mode = 'live';
       renderLive();
 
       head.querySelectorAll('[data-ft]').forEach(b => b.addEventListener('click', () => {
@@ -358,15 +347,18 @@ window.OVERWATCH_UI = (function () {
         mode = b.dataset.ft;
         if (mode === 'street') renderStreet(); else renderLive();
       }));
-      // TRY ANOTHER STREAM cycle
+      // ↻ NEXT cycles search variants in LIVE mode
       document.getElementById('ft-next').addEventListener('click', () => {
-        if (!alts.length) return;
-        idx = (idx + 1) % alts.length;
-        mode = 'live';
-        head.querySelectorAll('[data-ft]').forEach(x => x.classList.toggle('on', x.dataset.ft === 'live'));
+        if (mode === 'street') {
+          // back to LIVE on next press from street
+          head.querySelectorAll('[data-ft]').forEach(x => x.classList.toggle('on', x.dataset.ft === 'live'));
+          mode = 'live';
+        } else {
+          idx = (idx + 1) % variants.length;
+        }
         renderLive();
       });
-      // FULLSCREEN
+      // ⛶ FULL — works in either mode (targets iframe or body)
       document.getElementById('ft-fs').addEventListener('click', () => {
         const el = document.getElementById('feed-iframe') || body;
         if (document.fullscreenElement) {
@@ -377,7 +369,7 @@ window.OVERWATCH_UI = (function () {
         }
       });
 
-      logActivity(`▶ WATCH READY · ${n.name} → ${alts[0]?.source || n.feed_source}`);
+      logActivity(`▶ WATCH READY · ${camName} → ${cityName}`);
     } else {
       frame.innerHTML = '<div class="feed-empty"><div>NO FEED</div></div>';
     }
