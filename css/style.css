@@ -158,6 +158,19 @@ aside#right-panel { border-right: 0; border-left: 1px solid var(--line); }
   font-size: 18px; line-height: 1; padding: 0 4px;
 }
 .quick-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+.proxy-wrap { position: relative; display: flex; }
+.proxy-wrap input {
+  flex: 1; background: var(--bg-3); border: 1px solid var(--line);
+  color: var(--text); padding: 7px 28px 7px 8px; font-family: var(--font-mono); font-size: 10.5px;
+  outline: none;
+}
+.proxy-wrap input:focus { border-color: var(--cyan-dim); }
+#proxy-save {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: 0; color: var(--cyan); cursor: pointer; font-size: 14px;
+}
+.proxy-note { margin-top: 6px; font-family: var(--font-mono); letter-spacing: 0.5px; }
+.proxy-note.on { color: var(--green) !important; }
 .chip {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text-dim);
   padding: 3px 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px;

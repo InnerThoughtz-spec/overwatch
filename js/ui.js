@@ -280,6 +280,7 @@ window.OVERWATCH_UI = (function () {
       const stateName = n.state || '';
       const country  = n.country || '';
       const camName  = n.name || '';
+      const workerProxy = (localStorage.getItem('overwatch.workerProxy') || '').trim();
 
       // Build search variants — 6 different YouTube live-filter queries per cam.
       // Each one widens or specializes the search so users can find a working stream fast.
@@ -313,6 +314,23 @@ window.OVERWATCH_UI = (function () {
       async function renderLive() {
         const cur = variants[idx % variants.length];
         body.innerHTML = '';
+
+        // 0) If a worker proxy URL is configured, iframe the cam page THROUGH it.
+        //    This strips X-Frame-Options upstream-side → the page renders inline.
+        //    This is the TRUE "complete bypass" path.
+        if (workerProxy && n.feed_legacy_open) {
+          const proxiedUrl = workerProxy.replace(/\/$/, '') + '/proxy?url=' + encodeURIComponent(n.feed_legacy_open);
+          const ifr = document.createElement('iframe');
+          ifr.src = proxiedUrl;
+          ifr.id = 'feed-iframe';
+          ifr.setAttribute('allow', 'autoplay; fullscreen; geolocation');
+          ifr.setAttribute('allowfullscreen', '');
+          ifr.setAttribute('referrerpolicy', 'no-referrer');
+          ifr.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#000;';
+          body.appendChild(ifr);
+          document.getElementById('ft-src').textContent = `WORKER BYPASS · ${n.feed_source} · ${n.feed_name}`;
+          return;
+        }
 
         // 1) If we have a stream-extract URL, attempt the real bypass: fetch cam
         //    page via CORS proxy, extract m3u8, play in <video> with hls.js.
@@ -434,8 +452,35 @@ window.OVERWATCH_UI = (function () {
   }
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+  function bindProxy() {
+    const inp = document.getElementById('proxy-url');
+    const status = document.getElementById('proxy-status');
+    const saved = localStorage.getItem('overwatch.workerProxy') || '';
+    if (saved) {
+      inp.value = saved;
+      status.textContent = '✓ worker active · cam pages iframe through bypass';
+      status.classList.add('on');
+    }
+    const save = () => {
+      const v = inp.value.trim().replace(/\/$/, '');
+      if (v) {
+        localStorage.setItem('overwatch.workerProxy', v);
+        status.textContent = '✓ worker active · ' + v.slice(0, 40) + '… (saved)';
+        status.classList.add('on');
+        logActivity('BYPASS PROXY · ' + v);
+      } else {
+        localStorage.removeItem('overwatch.workerProxy');
+        status.textContent = 'not configured · cam pages will use YT search fallback';
+        status.classList.remove('on');
+      }
+    };
+    document.getElementById('proxy-save').addEventListener('click', save);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+  }
+
   function init() {
     bindSearch();
+    bindProxy();
     bindLayers();
     bindOverlays();
     bindZoom();
