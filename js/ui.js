@@ -275,11 +275,11 @@ window.OVERWATCH_UI = (function () {
       `;
       frame.appendChild(locked);
     } else if (n.feed_open_url || n.feed_url) {
-      const openUrl  = n.feed_open_url || n.feed_url;
-      const embedUrl = n.feed_url; // only present for embed_ok sources
-      const src      = n.feed_source || 'live source';
-      const camName  = n.feed_name || '';
-      const dist     = n.feed_distance_km != null ? `~${n.feed_distance_km} km away` : '';
+      // Build the cycling stream list — nearest first, plus alternates
+      const alts = (window.OVERWATCH_DATA.altStreams && window.OVERWATCH_DATA.altStreams(n.lat, n.lng, 12)) || [];
+      // Promote any embed-friendly alts to the top so user gets actual playback
+      alts.sort((a,b) => (b.embed?1:0) - (a.embed?1:0));
+      let idx = 0;
       const street   = n.feed_street_url;
 
       const head = document.createElement('div');
@@ -287,7 +287,9 @@ window.OVERWATCH_UI = (function () {
       head.innerHTML = `
         <button class="ft-btn on" data-ft="live">▶ LIVE</button>
         ${street ? `<button class="ft-btn" data-ft="street">STREET</button>` : ''}
-        <span class="ft-src">${escapeHtml(src)} · ${escapeHtml(camName)} ${dist ? '· ' + dist : ''}</span>
+        <button class="ft-btn ft-cycle" id="ft-next">↻ NEXT</button>
+        <button class="ft-btn ft-fs" id="ft-fs" title="fullscreen">⛶ FULL</button>
+        <span class="ft-src" id="ft-src"></span>
       `;
       frame.appendChild(head);
 
@@ -295,50 +297,83 @@ window.OVERWATCH_UI = (function () {
       body.className = 'feed-body';
       frame.appendChild(body);
 
+      function srcCaption() {
+        if (!alts.length) return n.feed_source + ' · ' + n.feed_name;
+        const a = alts[idx];
+        return `${a.source} · ${a.name} · ${a.distance_km}km · ${idx+1}/${alts.length}`;
+      }
+
       function renderLive() {
         body.innerHTML = '';
-        if (embedUrl) {
-          // try inline iframe for embed-friendly sources (YT specific videos etc)
+        const cur = alts.length ? alts[idx] : { url:n.feed_open_url, embed_url:n.feed_url, source:n.feed_source, name:n.feed_name, embed:!!n.feed_url };
+        if (cur.embed) {
           const ifr = document.createElement('iframe');
-          ifr.src = embedUrl;
+          ifr.src = cur.embed_url;
+          ifr.id = 'feed-iframe';
           ifr.setAttribute('allow', 'autoplay; fullscreen; geolocation');
+          ifr.setAttribute('allowfullscreen', '');
           ifr.setAttribute('referrerpolicy', 'no-referrer');
           ifr.setAttribute('loading', 'eager');
           body.appendChild(ifr);
-          // fallback CTA below
           const cta = document.createElement('a');
           cta.className = 'btn-watch-small';
-          cta.href = openUrl; cta.target = '_blank'; cta.rel = 'noopener noreferrer';
-          cta.textContent = `feed offline?  open on ${src} ↗`;
+          cta.href = cur.url; cta.target = '_blank'; cta.rel = 'noopener noreferrer';
+          cta.textContent = `feed offline?  open on ${cur.source} ↗`;
           body.appendChild(cta);
         } else {
-          // no iframe embed possible — prominent OPEN button
           const pad = document.createElement('div');
           pad.className = 'watch-pad';
           pad.innerHTML = `
             <div class="watch-thumb"><div class="watch-glyph">▶</div></div>
-            <a class="btn-watch" href="${openUrl}" target="_blank" rel="noopener noreferrer">
-              WATCH LIVE ON ${escapeHtml(src.toUpperCase())} ↗
+            <a class="btn-watch" href="${cur.url}" target="_blank" rel="noopener noreferrer">
+              WATCH LIVE ON ${escapeHtml(cur.source.toUpperCase())} ↗
             </a>
-            <div class="watch-note dim small">${escapeHtml(src)} blocks inline embed — opens in a new tab</div>
+            <div class="watch-note dim small">${escapeHtml(cur.source)} blocks inline embed — opens in a new tab. press <b>↻ NEXT</b> to try another nearby stream.</div>
           `;
           body.appendChild(pad);
         }
+        document.getElementById('ft-src').textContent = srcCaption();
       }
       function renderStreet() {
         body.innerHTML = '';
         const ifr = document.createElement('iframe');
         ifr.src = street;
+        ifr.id = 'feed-iframe';
         ifr.setAttribute('allow', 'autoplay; fullscreen; geolocation');
+        ifr.setAttribute('allowfullscreen', '');
         ifr.setAttribute('referrerpolicy', 'no-referrer');
         body.appendChild(ifr);
+        document.getElementById('ft-src').textContent = 'Mapillary · street imagery near ' + n.name;
       }
+
+      let mode = 'live';
       renderLive();
+
       head.querySelectorAll('[data-ft]').forEach(b => b.addEventListener('click', () => {
-        head.querySelectorAll('.ft-btn').forEach(x => x.classList.toggle('on', x === b));
-        if (b.dataset.ft === 'street') renderStreet(); else renderLive();
+        head.querySelectorAll('[data-ft]').forEach(x => x.classList.toggle('on', x === b));
+        mode = b.dataset.ft;
+        if (mode === 'street') renderStreet(); else renderLive();
       }));
-      logActivity(`▶ WATCH READY · ${n.name} → ${src}`);
+      // TRY ANOTHER STREAM cycle
+      document.getElementById('ft-next').addEventListener('click', () => {
+        if (!alts.length) return;
+        idx = (idx + 1) % alts.length;
+        mode = 'live';
+        head.querySelectorAll('[data-ft]').forEach(x => x.classList.toggle('on', x.dataset.ft === 'live'));
+        renderLive();
+      });
+      // FULLSCREEN
+      document.getElementById('ft-fs').addEventListener('click', () => {
+        const el = document.getElementById('feed-iframe') || body;
+        if (document.fullscreenElement) {
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        } else {
+          const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+          if (fn) fn.call(el);
+        }
+      });
+
+      logActivity(`▶ WATCH READY · ${n.name} → ${alts[0]?.source || n.feed_source}`);
     } else {
       frame.innerHTML = '<div class="feed-empty"><div>NO FEED</div></div>';
     }

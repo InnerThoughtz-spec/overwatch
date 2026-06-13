@@ -74,7 +74,48 @@
   // Each cam node gets nearest entry by lat/lng.
   // ──────────────────────────────────────────────────────────
   const WATCH_LINKS = [
-    // ─ EarthCam (open in new tab) ─
+    // ════════════════════════════════════════════════════════
+    // YouTube live video embeds (inline playable + fullscreen)
+    // These are the PRIMARY watch sources — they play in-frame.
+    // IDs are best-effort — if a stream dies the TRY ANOTHER
+    // button cycles through alternates.
+    // ════════════════════════════════════════════════════════
+    { url:'https://www.youtube.com/embed/AdUw5RdyZxI?autoplay=1&mute=1',                   lat:40.7580, lng:-73.9855, src:'YouTube', name:'Times Square Live',      embed:true },
+    { url:'https://www.youtube.com/embed/u4UZ4UvZXrg?autoplay=1&mute=1',                   lat:40.7580, lng:-73.9855, src:'YouTube', name:'Times Square 24/7',      embed:true },
+    { url:'https://www.youtube.com/embed/eJ7ZkQ5TC08?autoplay=1&mute=1',                   lat:35.6595, lng:139.7005, src:'YouTube', name:'Shibuya Crossing',       embed:true },
+    { url:'https://www.youtube.com/embed/DjdUEyjx8GM?autoplay=1&mute=1',                   lat:35.6938, lng:139.7036, src:'YouTube', name:'Tokyo Live',             embed:true },
+    { url:'https://www.youtube.com/embed/6lzrG_LMM-Y?autoplay=1&mute=1',                   lat:35.6586, lng:139.7454, src:'YouTube', name:'Tokyo Tower',            embed:true },
+    { url:'https://www.youtube.com/embed/1EiC9bvVGnk?autoplay=1&mute=1',                   lat:43.4799, lng:-110.7624,src:'YouTube', name:'Jackson Hole Town Sq',   embed:true },
+    { url:'https://www.youtube.com/embed/gBQI60FLfH4?autoplay=1&mute=1',                   lat:21.2772, lng:-157.8294,src:'YouTube', name:'Waikiki Live',           embed:true },
+    { url:'https://www.youtube.com/embed/WMu7Sf63xM4?autoplay=1&mute=1',                   lat:21.2911, lng:-157.8517,src:'YouTube', name:'Honolulu Live',          embed:true },
+    { url:'https://www.youtube.com/embed/mRe-514tGMg?autoplay=1&mute=1',                   lat:36.1147, lng:-115.1728,src:'YouTube', name:'Las Vegas Strip',        embed:true },
+    { url:'https://www.youtube.com/embed/H999s0P1Er0?autoplay=1&mute=1',                   lat:0.0,     lng:0.0,      src:'NASA YT', name:'ISS Live Earth View',    embed:true },
+    { url:'https://www.youtube.com/embed/lvWvFlnvbiM?autoplay=1&mute=1',                   lat:-27.0,   lng:32.4,     src:'YouTube', name:'Africam Tembe',          embed:true },
+    { url:'https://www.youtube.com/embed/ydYDqZQpim8?autoplay=1&mute=1',                   lat:-24.7,   lng:31.5,     src:'YouTube', name:'WildEarth Safari',       embed:true },
+    { url:'https://www.youtube.com/embed/dt0wAt7e9p4?autoplay=1&mute=1',                   lat:-25.0,   lng:31.5,     src:'YouTube', name:'Kruger NP Waterhole',    embed:true },
+    { url:'https://www.youtube.com/embed/EhwApn3pCS8?autoplay=1&mute=1',                   lat:-33.8915,lng:151.2767, src:'YouTube', name:'Bondi Beach Live',       embed:true },
+    { url:'https://www.youtube.com/embed/JG-7n0_Q3Hg?autoplay=1&mute=1',                   lat:-33.8568,lng:151.2153, src:'YouTube', name:'Sydney Harbour Live',    embed:true },
+    { url:'https://www.youtube.com/embed/N609loYkFJo?autoplay=1&mute=1',                   lat:50.0875, lng:14.4214,  src:'YouTube', name:'Prague Old Town',        embed:true },
+    { url:'https://www.youtube.com/embed/wT4yvNuFI64?autoplay=1&mute=1',                   lat:55.7558, lng:37.6173,  src:'YouTube', name:'Moscow Live',            embed:true },
+    { url:'https://www.youtube.com/embed/h1wly909BYw?autoplay=1&mute=1',                   lat:-22.9711,lng:-43.1822, src:'YouTube', name:'Copacabana Live',        embed:true },
+    { url:'https://www.youtube.com/embed/U3pBQ2_LkUg?autoplay=1&mute=1',                   lat:13.7563, lng:100.5018, src:'YouTube', name:'Bangkok Live',           embed:true },
+    { url:'https://www.youtube.com/embed/HpZAez2oYsw?autoplay=1&mute=1',                   lat:1.2839,  lng:103.8607, src:'YouTube', name:'Singapore Marina',       embed:true },
+    { url:'https://www.youtube.com/embed/2cANL3J6OQ4?autoplay=1&mute=1',                   lat:25.2048, lng:55.2708,  src:'YouTube', name:'Dubai Live',             embed:true },
+    { url:'https://www.youtube.com/embed/RnQpf0E_sdo?autoplay=1&mute=1',                   lat:51.5074, lng:-0.1278,  src:'YouTube', name:'London Live',            embed:true },
+    { url:'https://www.youtube.com/embed/_jq3KKf2-EU?autoplay=1&mute=1',                   lat:48.8566, lng:2.3522,   src:'YouTube', name:'Paris Live',             embed:true },
+    { url:'https://www.youtube.com/embed/RsiZsdv2pHs?autoplay=1&mute=1',                   lat:52.5200, lng:13.4050,  src:'YouTube', name:'Berlin Live',            embed:true },
+    { url:'https://www.youtube.com/embed/Q2Th8j4uoY8?autoplay=1&mute=1',                   lat:41.9028, lng:12.4964,  src:'YouTube', name:'Rome Live',              embed:true },
+    { url:'https://www.youtube.com/embed/UFM2idGZh78?autoplay=1&mute=1',                   lat:52.3676, lng:4.9041,   src:'YouTube', name:'Amsterdam Live',         embed:true },
+    { url:'https://www.youtube.com/embed/IcclspWEXMU?autoplay=1&mute=1',                   lat:25.7825, lng:-80.1340, src:'YouTube', name:'Miami Beach Live',       embed:true },
+    { url:'https://www.youtube.com/embed/lZxbu8L2Q4U?autoplay=1&mute=1',                   lat:34.1016, lng:-118.3267,src:'YouTube', name:'Hollywood Live',         embed:true },
+    { url:'https://www.youtube.com/embed/zwn2RHOIB7g?autoplay=1&mute=1',                   lat:43.0962, lng:-79.0377, src:'YouTube', name:'Niagara Falls Live',     embed:true },
+    { url:'https://www.youtube.com/embed/H1Sw82ZxgIw?autoplay=1&mute=1',                   lat:36.9333, lng:-76.2833, src:'YouTube', name:'Norfolk Tugs',           embed:true },
+    { url:'https://www.youtube.com/embed/uhnoaCp3DvY?autoplay=1&mute=1',                   lat:47.6062, lng:-122.3321,src:'YouTube', name:'Seattle Skyline',        embed:true },
+    { url:'https://www.youtube.com/embed/oasdjwerb1g?autoplay=1&mute=1',                   lat:37.4979, lng:127.0276, src:'YouTube', name:'Seoul Live',             embed:true },
+
+    // ════════════════════════════════════════════════════════
+    // EarthCam page URLs (open in new tab fallback — they block iframe)
+    // ════════════════════════════════════════════════════════
     { url:'https://www.earthcam.com/usa/newyork/timessquare/?cam=tsstreet',                lat:40.7580, lng:-73.9855, src:'EarthCam', name:'Times Square',           embed:false },
     { url:'https://www.earthcam.com/usa/newyork/newyork/?cam=ny_bowery',                   lat:40.7250, lng:-73.9930, src:'EarthCam', name:'Bowery NY',              embed:false },
     { url:'https://www.earthcam.com/usa/kentucky/covington/?cam=covington',                lat:39.0837, lng:-84.5086, src:'EarthCam', name:'Covington KY',           embed:false },
@@ -134,23 +175,49 @@
   ];
 
   function nearestWatch(lat, lng) {
-    let best = WATCH_LINKS[0], bestD = Infinity;
+    // Bias toward embed-friendly entries within reasonable range,
+    // so users see actual playing video instead of OPEN-in-new-tab.
+    let bestEmbed = null,  bestEmbedD = Infinity;
+    let bestAny   = null,  bestAnyD   = Infinity;
     for (let i = 0; i < WATCH_LINKS.length; i++) {
       const s = WATCH_LINKS[i];
       const dLat = s.lat - lat;
       const dLng = ((s.lng - lng + 540) % 360) - 180;
       const d = dLat*dLat + dLng*dLng;
-      if (d < bestD) { bestD = d; best = s; }
+      if (d < bestAnyD) { bestAnyD = d; bestAny = s; }
+      if (s.embed && d < bestEmbedD) { bestEmbedD = d; bestEmbed = s; }
     }
-    const km = Math.round(Math.sqrt(bestD) * 111);
+    // If an embed is within ~25° (≈2800km) of the cam, prefer it
+    const pick = (bestEmbed && bestEmbedD < 625) ? bestEmbed : bestAny;
+    const d2 = pick === bestEmbed ? bestEmbedD : bestAnyD;
+    const km = Math.round(Math.sqrt(d2) * 111);
     return {
-      open_url: best.url,
-      embed_url: best.embed ? best.url : null,
-      source: best.src,
-      name: best.name,
+      open_url: pick.url,
+      embed_url: pick.embed ? pick.url : null,
+      source: pick.src,
+      name: pick.name,
       distance_km: km,
       mp_url: `https://www.mapillary.com/embed?map_style=mapbox-streets&map_lat=${lat}&map_lng=${lng}&map_zoom=18&style=split`
     };
+  }
+
+  // Returns nearest-N pool entries (for the "TRY ANOTHER STREAM" cycle button)
+  function altStreams(lat, lng, n) {
+    n = n || 12;
+    const ranked = WATCH_LINKS.map(s => {
+      const dLat = s.lat - lat;
+      const dLng = ((s.lng - lng + 540) % 360) - 180;
+      return [s, dLat*dLat + dLng*dLng];
+    }).sort((a, b) => a[1] - b[1]).slice(0, n);
+    return ranked.map(([s, d]) => ({
+      url: s.url,
+      embed_url: s.embed ? s.url : null,
+      open_url: s.url,
+      source: s.src,
+      name: s.name,
+      embed: s.embed,
+      distance_km: Math.round(Math.sqrt(d) * 111)
+    }));
   }
 
   // Legacy alias retained for any code still calling nearestStream
@@ -624,8 +691,12 @@
     });
   }
 
+  // expose alternates lookup for UI's TRY ANOTHER button
+  const _ovwAltExport = altStreams;
+
   // expose
   window.OVERWATCH_DATA = {
+    altStreams: _ovwAltExport,
     cameras, flock, typeMeta,
     cities: CITIES.map(c => ({ name:c[0], lat:c[1], lng:c[2], country:c[3], state:c[4], code:c[12] })),
     stats: {

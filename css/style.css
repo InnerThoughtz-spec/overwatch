@@ -342,11 +342,24 @@ aside#right-panel { border-right: 0; border-left: 1px solid var(--line); }
   font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.4px;
   padding: 3px 6px; cursor: pointer;
 }
-.ft-btn:hover { color: var(--cyan); }
-.ft-btn.on { color: var(--cyan); border-color: var(--cyan); }
+.ft-btn:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+.ft-btn.on { color: var(--cyan); border-color: var(--cyan); background: rgba(58,214,255,0.07); }
+.ft-cycle { color: var(--amber); border-color: var(--amber-dim); }
+.ft-cycle:hover { color: var(--amber); border-color: var(--amber); background: rgba(255,181,71,0.08); }
+.ft-fs { color: var(--cyan); }
 .ft-src {
   margin-left: auto; font-family: var(--font-mono); font-size: 9px;
   color: var(--text-mute); padding-right: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;
+}
+
+/* fullscreen state — feed iframe goes black-bg, fills viewport */
+:fullscreen, ::backdrop { background: #000; }
+.feed-body:fullscreen, #feed-iframe:fullscreen {
+  background: #000;
+}
+.feed-body:fullscreen iframe, #feed-iframe:fullscreen {
+  width: 100vw; height: 100vh;
 }
 .feed-empty {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
