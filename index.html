@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OVERWATCH // Global Intel Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="boot">
+  <div class="boot-inner">
+    <div class="boot-glyph">◉</div>
+    <div class="boot-title">OVERWATCH</div>
+    <div class="boot-sub">global intel grid // initializing</div>
+    <div class="boot-bar"><div class="boot-fill"></div></div>
+    <div class="boot-log" id="boot-log"></div>
+  </div>
+</div>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-glyph">◉</span>
+    <span class="brand-name">OVERWATCH</span>
+    <span class="brand-sub">/ global intel grid</span>
+  </div>
+  <div class="topbar-meta">
+    <div class="meta-block"><span class="meta-label">UTC</span><span id="utc-clock" class="meta-val">--:--:--</span></div>
+    <div class="meta-block"><span class="meta-label">NODES</span><span id="node-count" class="meta-val">0</span></div>
+    <div class="meta-block"><span class="meta-label">ALPR</span><span id="alpr-count" class="meta-val">0</span></div>
+    <div class="meta-block"><span class="meta-label">FEEDS</span><span id="feed-count" class="meta-val">0</span></div>
+    <div class="meta-block status-block"><span class="meta-label">STATUS</span><span class="meta-val status-ok">NOMINAL</span></div>
+  </div>
+</header>
+
+<main id="grid">
+
+  <aside id="left-panel">
+    <section class="panel">
+      <h3 class="panel-title">QUERY</h3>
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="city, country, agency, type…" autocomplete="off" />
+        <button id="search-clear" title="clear">×</button>
+      </div>
+      <div class="quick-chips">
+        <button class="chip" data-quick="usa">USA</button>
+        <button class="chip" data-quick="europe">EU</button>
+        <button class="chip" data-quick="asia">ASIA</button>
+        <button class="chip" data-quick="flock">FLOCK</button>
+        <button class="chip" data-quick="traffic">TRAFFIC</button>
+        <button class="chip" data-quick="public">PUBLIC</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">LAYERS</h3>
+      <ul class="layer-list" id="layer-list">
+        <li><label><input type="checkbox" data-layer="traffic" checked> <span class="layer-dot" style="--c:#3ad6ff"></span> Traffic CCTV</label><span class="layer-count" data-count="traffic">0</span></li>
+        <li><label><input type="checkbox" data-layer="public" checked> <span class="layer-dot" style="--c:#4ade80"></span> Public Webcams</label><span class="layer-count" data-count="public">0</span></li>
+        <li><label><input type="checkbox" data-layer="scenic" checked> <span class="layer-dot" style="--c:#a78bfa"></span> Scenic / Coastal</label><span class="layer-count" data-count="scenic">0</span></li>
+        <li><label><input type="checkbox" data-layer="port" checked> <span class="layer-dot" style="--c:#fbbf24"></span> Port / Airport</label><span class="layer-count" data-count="port">0</span></li>
+        <li><label><input type="checkbox" data-layer="flock" checked> <span class="layer-dot" style="--c:#ff4d6d"></span> Flock ALPR</label><span class="layer-count" data-count="flock">0</span></li>
+        <li><label><input type="checkbox" data-layer="dash"> <span class="layer-dot" style="--c:#ff8a3c"></span> User-Added</label><span class="layer-count" data-count="dash">0</span></li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">INTEL OVERLAYS</h3>
+      <ul class="overlay-list">
+        <li><label><input type="checkbox" id="ov-arcs"> Watch Arcs</label></li>
+        <li><label><input type="checkbox" id="ov-heat"> Density Heatmap</label></li>
+        <li><label><input type="checkbox" id="ov-graticule" checked> Graticule</label></li>
+        <li><label><input type="checkbox" id="ov-atmosphere" checked> Atmosphere</label></li>
+        <li><label><input type="checkbox" id="ov-spin"> Auto-Rotate</label></li>
+        <li><label><input type="checkbox" id="ov-night"> Night Lights</label></li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">CONTROL</h3>
+      <div class="btn-col">
+        <button class="btn" id="btn-add">+ Add Camera Node</button>
+        <button class="btn" id="btn-import">Import Feed List (.json)</button>
+        <button class="btn" id="btn-export">Export Current Set</button>
+        <button class="btn btn-warn" id="btn-flock-load">Load Full Flock Map</button>
+      </div>
+    </section>
+  </aside>
+
+  <section id="globe-wrap">
+    <div id="globe"></div>
+    <div id="globe-hud">
+      <div class="hud-corner tl">
+        <div class="hud-line"><span class="dim">LAT</span> <span id="hud-lat">0.000</span></div>
+        <div class="hud-line"><span class="dim">LNG</span> <span id="hud-lng">0.000</span></div>
+        <div class="hud-line"><span class="dim">ALT</span> <span id="hud-alt">2.5</span></div>
+      </div>
+      <div class="hud-corner tr">
+        <div class="hud-line"><span class="dim">SELECTED</span></div>
+        <div id="hud-target">— none —</div>
+      </div>
+      <div class="hud-corner bl">
+        <div class="hud-line"><span class="dim">CURSOR</span> <span id="hud-cursor">—, —</span></div>
+      </div>
+      <div class="hud-corner br">
+        <div class="hud-line"><span class="dim">RENDER</span> <span id="hud-fps">— fps</span></div>
+        <div class="hud-line"><span class="dim">LOD</span> <span id="level-indicator">—</span></div>
+      </div>
+      <div class="reticle"></div>
+    </div>
+    <div id="globe-zoom">
+      <button data-zoom="in">+</button>
+      <button data-zoom="out">−</button>
+      <button data-zoom="reset" title="reset view">⊙</button>
+    </div>
+  </section>
+
+  <aside id="right-panel">
+    <section class="panel target-panel">
+      <h3 class="panel-title">TARGET</h3>
+      <div id="target-empty" class="empty">
+        <div class="empty-glyph">◯</div>
+        <div>select a node on the globe</div>
+      </div>
+      <div id="target-card" class="hidden">
+        <div class="target-head">
+          <div class="target-name" id="t-name">—</div>
+          <div class="target-tags" id="t-tags"></div>
+        </div>
+        <div class="target-meta">
+          <div><span class="dim">ID</span><span id="t-id">—</span></div>
+          <div><span class="dim">TYPE</span><span id="t-type">—</span></div>
+          <div><span class="dim">SOURCE</span><span id="t-source">—</span></div>
+          <div><span class="dim">AGENCY</span><span id="t-agency">—</span></div>
+          <div><span class="dim">LAT</span><span id="t-lat">—</span></div>
+          <div><span class="dim">LNG</span><span id="t-lng">—</span></div>
+          <div><span class="dim">CITY</span><span id="t-city">—</span></div>
+          <div><span class="dim">COUNTRY</span><span id="t-country">—</span></div>
+          <div><span class="dim">DIR</span><span id="t-dir">—</span></div>
+          <div><span class="dim">RES</span><span id="t-res">—</span></div>
+          <div><span class="dim">MODE</span><span id="t-mode">—</span></div>
+          <div><span class="dim">INST</span><span id="t-inst">—</span></div>
+          <div><span class="dim">MODEL</span><span id="t-model">—</span></div>
+          <div><span class="dim">LAST</span><span id="t-last">—</span></div>
+        </div>
+        <div class="feed-frame" id="feed-frame">
+          <div class="feed-empty"><div>SELECT A NODE TO WATCH</div></div>
+        </div>
+        <div class="target-actions">
+          <button class="btn-mini btn-prime-mini" id="btn-streetview">▶ TILE VIEW</button>
+          <button class="btn-mini" id="btn-fly">FLY IN</button>
+          <button class="btn-mini" id="btn-copy">COPY COORDS</button>
+          <button class="btn-mini" id="btn-osint">GMAPS</button>
+          <button class="btn-mini" id="btn-mark">MARK</button>
+        </div>
+        <div class="target-notes">
+          <label class="dim">NOTES</label>
+          <textarea id="t-notes" placeholder="recon notes, last verified, agency contact, FOIA refs…"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">RECENT ACTIVITY</h3>
+      <ul id="activity-list" class="activity-list"></ul>
+    </section>
+  </aside>
+
+</main>
+
+<footer id="bottombar">
+  <div class="ticker" id="ticker"></div>
+  <div class="legal">OVERWATCH // OSINT viewer · feeds shown are public sources or user-supplied credentials only</div>
+</footer>
+
+<!-- modal: add camera -->
+<div class="modal-mask hidden" id="modal-add">
+  <div class="modal">
+    <h3>ADD CAMERA NODE</h3>
+    <label>Name <input id="add-name" placeholder="e.g. SR-520 Bridge West"/></label>
+    <label>Latitude <input id="add-lat" type="number" step="0.0001" placeholder="47.6420"/></label>
+    <label>Longitude <input id="add-lng" type="number" step="0.0001" placeholder="-122.2410"/></label>
+    <label>Type
+      <select id="add-type">
+        <option value="traffic">Traffic CCTV</option>
+        <option value="public">Public Webcam</option>
+        <option value="scenic">Scenic / Coastal</option>
+        <option value="port">Port / Airport</option>
+        <option value="flock">Flock ALPR</option>
+        <option value="dash">User-Added</option>
+      </select>
+    </label>
+    <label>Feed URL (mjpeg, .m3u8, iframe, or .jpg snapshot) <input id="add-feed" placeholder="https://…"/></label>
+    <label>Agency / Owner <input id="add-agency" placeholder="optional"/></label>
+    <label>City / Country <input id="add-place" placeholder="e.g. Seattle, USA"/></label>
+    <label>Notes <textarea id="add-notes" rows="3"></textarea></label>
+    <div class="modal-actions">
+      <button class="btn" id="add-cancel">CANCEL</button>
+      <button class="btn btn-prime" id="add-save">DEPLOY NODE</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/data.js"></script>
+<script src="js/globe.js"></script>
+<script src="js/map.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
